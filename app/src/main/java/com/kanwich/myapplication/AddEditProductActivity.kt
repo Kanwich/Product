@@ -113,8 +113,8 @@ class AddEditProductActivity : AppCompatActivity() {
             imageUrl = ""
         )
 
-        val result = if (isEditMode) {
-            dbHelper.updateProduct(product)
+        val result: Long = if (isEditMode) {
+            dbHelper.updateProduct(product).toLong()
         } else {
             dbHelper.addProduct(product)
         }
