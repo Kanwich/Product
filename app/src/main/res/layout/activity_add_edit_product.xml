@@ -13,6 +13,31 @@
         android:layout_height="wrap_content"
         android:padding="16dp">
 
+        <ImageView
+            android:id="@+id/imageViewProduct"
+            android:layout_width="0dp"
+            android:layout_height="200dp"
+            android:scaleType="centerCrop"
+            android:background="@android:color/darker_gray"
+            android:contentDescription="รูปสินค้า"
+            android:src="@android:drawable/ic_menu_gallery"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            android:layout_marginTop="16dp" />
+
+        <Button
+            android:id="@+id/buttonSelectImage"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="เลือกรูปภาพ"
+            android:drawableLeft="@android:drawable/ic_menu_camera"
+            android:drawablePadding="8dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/imageViewProduct"
+            android:layout_marginTop="8dp" />
+
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/textInputLayoutName"
             android:layout_width="0dp"
@@ -20,7 +45,7 @@
             android:hint="ชื่อสินค้า"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/buttonSelectImage"
             android:layout_marginTop="16dp">
 
             <com.google.android.material.textfield.TextInputEditText

@@ -1,22 +1,75 @@
 package com.kanwich.myapplication
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
+import java.text.SimpleDateFormat
+import java.util.*
 
 class AddEditProductActivity : AppCompatActivity() {
 
     private lateinit var editTextName: EditText
     private lateinit var editTextPrice: EditText
     private lateinit var editTextQuantity: EditText
+    private lateinit var imageViewProduct: ImageView
+    private lateinit var buttonSelectImage: Button
     private lateinit var buttonSave: Button
     private lateinit var buttonCancel: Button
     private lateinit var dbHelper: ProductDbHelper
 
     private var productId: Int = -1
     private var isEditMode = false
+    private var selectedImagePath: String = ""
+    private var currentPhotoUri: Uri? = null
+
+    // Camera launcher
+    private val takePictureLauncher = registerForActivityResult(
+        ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success) {
+            currentPhotoUri?.let { uri ->
+                selectedImagePath = saveImageToInternalStorage(uri)
+                displayImage(selectedImagePath)
+            }
+        }
+    }
+
+    // Gallery launcher
+    private val pickImageLauncher = registerForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            selectedImagePath = saveImageToInternalStorage(it)
+            displayImage(selectedImagePath)
+        }
+    }
+
+    // Permission launcher
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            openCamera()
+        } else {
+            Toast.makeText(this, "ต้องการสิทธิ์กล้องเพื่อถ่ายรูป", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,6 +93,10 @@ class AddEditProductActivity : AppCompatActivity() {
         }
 
         // Setup button listeners
+        buttonSelectImage.setOnClickListener {
+            showImagePickerDialog()
+        }
+
         buttonSave.setOnClickListener {
             saveProduct()
         }
@@ -53,6 +110,8 @@ class AddEditProductActivity : AppCompatActivity() {
         editTextName = findViewById(R.id.editTextName)
         editTextPrice = findViewById(R.id.editTextPrice)
         editTextQuantity = findViewById(R.id.editTextQuantity)
+        imageViewProduct = findViewById(R.id.imageViewProduct)
+        buttonSelectImage = findViewById(R.id.buttonSelectImage)
         buttonSave = findViewById(R.id.buttonSave)
         buttonCancel = findViewById(R.id.buttonCancel)
     }
@@ -63,6 +122,123 @@ class AddEditProductActivity : AppCompatActivity() {
             editTextName.setText(it.name)
             editTextPrice.setText(it.price.toString())
             editTextQuantity.setText(it.quantity.toString())
+            selectedImagePath = it.imageUrl
+            if (selectedImagePath.isNotEmpty()) {
+                displayImage(selectedImagePath)
+            }
+        }
+    }
+
+    private fun showImagePickerDialog() {
+        val options = arrayOf("ถ่ายรูป", "เลือกจากแกลเลอรี่", "ยกเลิก")
+        AlertDialog.Builder(this)
+            .setTitle("เลือกรูปภาพ")
+            .setItems(options) { dialog, which ->
+                when (which) {
+                    0 -> checkCameraPermission()
+                    1 -> openGallery()
+                    2 -> dialog.dismiss()
+                }
+            }
+            .show()
+    }
+
+    private fun checkCameraPermission() {
+        when {
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.CAMERA
+            ) == PackageManager.PERMISSION_GRANTED -> {
+                openCamera()
+            }
+            else -> {
+                requestPermissionLauncher.launch(Manifest.permission.CAMERA)
+            }
+        }
+    }
+
+    private fun openCamera() {
+        val photoFile = createImageFile()
+        photoFile?.let {
+            currentPhotoUri = FileProvider.getUriForFile(
+                this,
+                "${packageName}.fileprovider",
+                it
+            )
+            takePictureLauncher.launch(currentPhotoUri)
+        }
+    }
+
+    private fun openGallery() {
+        pickImageLauncher.launch("image/*")
+    }
+
+    private fun createImageFile(): File? {
+        return try {
+            val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+            val imageFileName = "PRODUCT_${timeStamp}_"
+            val storageDir = getExternalFilesDir(null)
+            File.createTempFile(imageFileName, ".jpg", storageDir)
+        } catch (e: IOException) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    private fun saveImageToInternalStorage(uri: Uri): String {
+        return try {
+            val inputStream = contentResolver.openInputStream(uri)
+            val bitmap = BitmapFactory.decodeStream(inputStream)
+            inputStream?.close()
+
+            // Resize bitmap if too large
+            val resizedBitmap = resizeBitmap(bitmap, 800, 800)
+
+            // Save to internal storage
+            val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+            val filename = "product_${timeStamp}.jpg"
+            val file = File(filesDir, filename)
+
+            FileOutputStream(file).use { out ->
+                resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 85, out)
+            }
+
+            file.absolutePath
+        } catch (e: Exception) {
+            e.printStackTrace()
+            ""
+        }
+    }
+
+    private fun resizeBitmap(bitmap: Bitmap, maxWidth: Int, maxHeight: Int): Bitmap {
+        val width = bitmap.width
+        val height = bitmap.height
+
+        if (width <= maxWidth && height <= maxHeight) {
+            return bitmap
+        }
+
+        val ratioBitmap = width.toFloat() / height.toFloat()
+        val ratioMax = maxWidth.toFloat() / maxHeight.toFloat()
+
+        var finalWidth = maxWidth
+        var finalHeight = maxHeight
+
+        if (ratioMax > ratioBitmap) {
+            finalWidth = (maxHeight.toFloat() * ratioBitmap).toInt()
+        } else {
+            finalHeight = (maxWidth.toFloat() / ratioBitmap).toInt()
+        }
+
+        return Bitmap.createScaledBitmap(bitmap, finalWidth, finalHeight, true)
+    }
+
+    private fun displayImage(imagePath: String) {
+        if (imagePath.isNotEmpty() && File(imagePath).exists()) {
+            val bitmap = BitmapFactory.decodeFile(imagePath)
+            imageViewProduct.setImageBitmap(bitmap)
+        } else {
+            imageViewProduct.setImageResource(android.R.drawable.ic_menu_gallery)
         }
     }
 
@@ -110,7 +286,7 @@ class AddEditProductActivity : AppCompatActivity() {
             name = name,
             price = price,
             quantity = quantity,
-            imageUrl = ""
+            imageUrl = selectedImagePath
         )
 
         val result: Long = if (isEditMode) {

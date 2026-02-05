@@ -1,5 +1,6 @@
 package com.kanwich.myapplication
 
+import android.graphics.BitmapFactory
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -7,6 +8,7 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
+import java.io.File
 
 class ProductAdapter(
     private var products: MutableList<Product>,
@@ -37,9 +39,13 @@ class ProductAdapter(
         holder.textViewPrice.text = "ราคา: ฿${String.format("%.2f", product.price)}"
         holder.textViewQuantity.text = "จำนวน: ${product.quantity} ชิ้น"
 
-        // ถ้ามี URL รูปภาพ สามารถใช้ Glide หรือ Picasso โหลดรูป
-        // สำหรับตัวอย่างนี้จะใช้รูป placeholder
-        holder.imageView.setImageResource(android.R.drawable.ic_menu_gallery)
+        // โหลดรูปภาพ
+        if (product.imageUrl.isNotEmpty() && File(product.imageUrl).exists()) {
+            val bitmap = BitmapFactory.decodeFile(product.imageUrl)
+            holder.imageView.setImageBitmap(bitmap)
+        } else {
+            holder.imageView.setImageResource(android.R.drawable.ic_menu_gallery)
+        }
 
         // คลิกที่รายการเพื่อดูรายละเอียด
         holder.itemView.setOnClickListener {
