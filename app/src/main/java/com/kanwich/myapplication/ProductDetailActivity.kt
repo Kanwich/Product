@@ -1,13 +1,11 @@
 package com.kanwich.myapplication
 
-import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import java.io.File
 
 class ProductDetailActivity : AppCompatActivity() {
 
@@ -62,13 +60,8 @@ class ProductDetailActivity : AppCompatActivity() {
             textViewPrice.text = "ราคา: ฿${String.format("%.2f", it.price)}"
             textViewQuantity.text = "จำนวนในสต็อก: ${it.quantity} ชิ้น"
 
-            // โหลดรูปภาพ
-            if (it.imageUrl.isNotEmpty() && File(it.imageUrl).exists()) {
-                val bitmap = BitmapFactory.decodeFile(it.imageUrl)
-                imageView.setImageBitmap(bitmap)
-            } else {
-                imageView.setImageResource(android.R.drawable.ic_menu_gallery)
-            }
+            // โหลดรูปภาพ (ใช้รูป placeholder สำหรับตัวอย่าง)
+            imageView.setImageResource(android.R.drawable.ic_menu_gallery)
         } ?: run {
             Toast.makeText(this, "ไม่พบข้อมูลสินค้า", Toast.LENGTH_SHORT).show()
             finish()

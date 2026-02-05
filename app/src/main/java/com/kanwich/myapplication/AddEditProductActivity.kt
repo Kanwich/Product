@@ -160,12 +160,13 @@ class AddEditProductActivity : AppCompatActivity() {
     private fun openCamera() {
         val photoFile = createImageFile()
         photoFile?.let {
-            currentPhotoUri = FileProvider.getUriForFile(
+            val uri = FileProvider.getUriForFile(
                 this,
                 "${packageName}.fileprovider",
                 it
             )
-            takePictureLauncher.launch(currentPhotoUri)
+            currentPhotoUri = uri
+            takePictureLauncher.launch(uri)
         }
     }
 
